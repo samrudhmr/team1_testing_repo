@@ -119,7 +119,7 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
         self.assertEqual(self.analyzer._classify_type(["random"], ""), "Other")
 
     # ------------------------------------------------------------------
-    # _prepare_category_table (real pandas, FIXED)
+    # _prepare_category_table
     # ------------------------------------------------------------------
     def test_prepare_category_table_real(self):
         df = pd.DataFrame({
@@ -129,16 +129,14 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
 
         table = self.analyzer._prepare_category_table(df)
 
-        # check proper summation
         self.assertEqual(table.loc["Bug", "count"], 2.0)
         self.assertEqual(table.loc["Feature", "count"], 1.0)
         self.assertEqual(table.loc["Other", "count"], 1.0)
 
-        # pct should sum to 1 over non-zero entries
         self.assertAlmostEqual(table["pct"].sum(), 1.0, places=6)
 
     # ------------------------------------------------------------------
-    # Plot functions — only patch plt
+    # Plot tests
     # ------------------------------------------------------------------
     @patch("most_active_categories_analyser.plt")
     def test_plot_lollipop(self, mock_plt):
@@ -175,10 +173,13 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
         res = self.analyzer._build_plot_category_pie(table, "2023")
         self.assertIs(res, mock_fig)
 
+    # ------------------------------------------------------------------
+    # FIXED test_plot_state_bars (correctly indented)
+    # ------------------------------------------------------------------
     @patch("most_active_categories_analyser.plt")
     @patch("most_active_categories_analyser.tabulate")
     @patch("builtins.print")
-    def test_plot_state_bars(self, mock_print, mock_tab, mock_plt):
+    def test_plot_state_bars(self, mock_print, mock_tabulate, mock_plt):
         mock_fig = MagicMock()
         mock_ax = MagicMock()
         mock_plt.subplots.return_value = (mock_fig, mock_ax)
@@ -191,10 +192,11 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
 
         res = self.analyzer._build_plot_category_state_bars(df, "2023")
         self.assertIs(res, mock_fig)
-        mock_tab.tabulate.assert_called()
+
+        mock_tabulate.assert_called()
 
     # ------------------------------------------------------------------
-    # run()
+    # RUN()
     # ------------------------------------------------------------------
     @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._load_issues")
     @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._flatten_events")
