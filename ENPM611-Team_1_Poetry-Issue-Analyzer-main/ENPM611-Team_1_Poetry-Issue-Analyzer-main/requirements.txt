@@ -2,3 +2,5 @@ python-dateutil
 pandas
 matplotlib
 tabulate
+numpy
+coverage
