@@ -96,5 +96,37 @@ class TestTopUserActivity(unittest.TestCase):
         df = self.analyser._compute_activity_dataframe(True)
         self.assertTrue(df.empty)
 
+
+    def test_ghost_user_crash(self):
+        """
+        Bug: If a user is None (deleted account), the print formatting 
+        crashes with TypeError.
+        """
+        ghost_issue = MockIssue(creator=None, user=None, creator_login=None)
+        self.analyser.issues = [ghost_issue]
+        
+        with self.assertRaises(TypeError):
+            with patch('builtins.print'): 
+                self.analyser.run()
+
+    def test_logic_closed_issues(self):
+        """
+        Checks if closed issues get credited properly.
+        """
+        # Issue is closed, but the only event is 'labeled'.
+        trap_issue = MockIssue(creator='Alice', state='closed', events=[
+            MockEvent(event_type='labeled', actor_login='Bot')
+        ])
+        
+        self.analyser.issues = [trap_issue]
+        
+        df = self.analyser._compute_activity_dataframe(True)
+        
+        row = df[df['user'] == 'Alice'].iloc[0]
+        
+        # We Expect Alice to have 1 closed credit because the issue is closed.
+        # The code calculates 0. This assertion will fail.
+        self.assertEqual(row['closed'], 1, "Alice should be credited for the closed issue")
+
 if __name__ == '__main__':
     unittest.main()
