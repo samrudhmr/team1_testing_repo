@@ -174,7 +174,7 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
         self.assertIs(res, mock_fig)
 
     # ------------------------------------------------------------------
-    # FIXED test_plot_state_bars (correctly indented)
+    # FIXED test_plot_state_bars
     # ------------------------------------------------------------------
     @patch("most_active_categories_analyser.plt")
     @patch("most_active_categories_analyser.tabulate")
@@ -192,11 +192,10 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
 
         res = self.analyzer._build_plot_category_state_bars(df, "2023")
         self.assertIs(res, mock_fig)
-
         mock_tabulate.assert_called()
 
     # ------------------------------------------------------------------
-    # RUN()
+    # RUN: existing
     # ------------------------------------------------------------------
     @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._load_issues")
     @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._flatten_events")
@@ -226,6 +225,74 @@ class TestMostActiveCategoriesAnalyser(unittest.TestCase):
         with patch("most_active_categories_analyser.plt.show"):
             res = self.analyzer.run(year=2023, top_n=2)
             self.assertIsNotNone(res)
+
+    # ================================================================
+    # NEW TESTS TO INCREASE COVERAGE SAFELY
+    # ================================================================
+
+    @patch("most_active_categories_analyser.tabulate")
+    @patch("builtins.print")
+    def test_print_other_breakdown_with_labels(self, mock_print, mock_tab):
+        df = pd.DataFrame({
+            "issue_id": ["1"],
+            "labels": [("abc/def", "xyz")],
+            "type": ["Other"]
+      })
+        self.analyzer._print_other_breakdown(df, "2023")
+        self.assertTrue(mock_print.called)
+        self.assertTrue(mock_tab.called)
+
+
+    @patch("builtins.print")
+    def test_print_other_breakdown_no_labels(self, mock_print):
+        df = pd.DataFrame({
+            "issue_id": ["1"],
+            "labels": [tuple()],
+            "type": ["Other"]
+        })
+        self.analyzer._print_other_breakdown(df, "2023")
+        mock_print.assert_any_call("No labels found inside 'Other' for 2023.\n")
+
+    @patch("most_active_categories_analyser.plt")
+    def test_plot_pie_all_zero(self, mock_plt):
+        mock_fig = MagicMock()
+        mock_ax = MagicMock()
+        mock_plt.subplots.return_value = (mock_fig, mock_ax)
+
+        table = pd.DataFrame({"count": [0, 0], "pct": [0, 0]}, index=["Bug", "Feature"])
+        res = self.analyzer._build_plot_category_pie(table, "2023")
+        mock_ax.text.assert_called()
+        self.assertIs(res, mock_fig)
+
+    @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._load_issues")
+    @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._flatten_events")
+    @patch("builtins.print")
+    def test_run_filter_type_empty(self, mock_print, mock_flat, mock_load):
+        mock_load.return_value = [{"number": 1, "title": "A", "labels": ["bug"], "state": "open"}]
+        ev = pd.DataFrame({"issue_id": ["1"], "title": ["A"], "event_type": ["opened"], "year": [2023]})
+        mock_flat.return_value = ev
+        self.analyzer.run(year=2023, filter_type="Feature")
+        mock_print.assert_any_call("No issues found for Type(s): ['Feature'] in 2023")
+
+    @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._load_issues")
+    @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._flatten_events")
+    @patch("builtins.print")
+    def test_run_filter_labels_empty(self, mock_print, mock_flat, mock_load):
+        mock_load.return_value = [{"number": 1, "title": "A", "labels": ["feature"], "state": "open"}]
+        ev = pd.DataFrame({"issue_id": ["1"], "title": ["A"], "event_type": ["opened"], "year": [2023]})
+        mock_flat.return_value = ev
+        self.analyzer.run(year=2023, filter_labels="bug")
+        mock_print.assert_any_call("No issues found for raw label(s): ['bug'] in 2023")
+
+    @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._load_issues")
+    @patch("most_active_categories_analyser.MostActiveCategoriesAnalyser._flatten_events")
+    @patch("most_active_categories_analyser.plt.show")
+    def test_run_year_range(self, mock_show, mock_flat, mock_load):
+        mock_load.return_value = [{"number": 1, "title": "A", "labels": ["bug"], "state": "open"}]
+        ev = pd.DataFrame({"issue_id": ["1"], "title": ["A"], "event_type": ["opened"], "year": [2021]})
+        mock_flat.return_value = ev
+        res = self.analyzer.run(start_year=2020, end_year=2022, top_n=1)
+        self.assertIsNotNone(res)
 
 
 if __name__ == "__main__":
